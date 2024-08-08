@@ -22,6 +22,7 @@ describe("Test Minter", () => {
       pg.PROGRAM_ID
     );
 
+    
     const [metadataAddress] = web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(METADATA_SEED),
@@ -30,9 +31,12 @@ describe("Test Minter", () => {
       ],
       TOKEN_METADATA_PROGRAM_ID
     );
-  
+    
     // Test init token
     it("initialize", async () => {
+      
+      // Log the token address (mint address)
+      console.log("Token ID (Mint Address):", mint.toString());
 
       const info = await pg.connection.getAccountInfo(mint);
       if (info) {
