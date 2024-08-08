@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 describe("Test Minter", () => {
     // Metaplex Constants
     const METADATA_SEED = "metadata";
