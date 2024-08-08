@@ -1,0 +1,30 @@
+# Node modules
+node_modules/
+
+# Build output
+target/
+dist/
+
+# Rust build artifacts
+*.rlib
+*.d
+*.o
+*.so
+*.dSYM
+*.exe
+*.dll
+*.dylib
+
+# Anchor specific
+anchor/target/
+anchor/keys/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# IDE specific
+.vscode/
+.idea/
