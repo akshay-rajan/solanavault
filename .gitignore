@@ -28,3 +28,6 @@ anchor/keys/
 # IDE specific
 .vscode/
 .idea/
+
+# Notes
+code.txt
