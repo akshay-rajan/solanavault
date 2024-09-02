@@ -110,6 +110,33 @@ pub mod wallet {
         msg!("Deposited {} SOL and minted {} LP tokens.", amount, lp_tokens_to_mint);
         Ok(())
     }
+
+    // Send SOL from the vault to the user
+    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+
+        let vault_account = &mut ctx.accounts.vault_account.to_account_info();
+        let user = &mut ctx.accounts.user;
+
+        let post_from = vault_account
+            .lamports()
+            .checked_sub(amount)
+            .ok_or(Errors::NumericalOverflow)?;
+        let post_to = user
+            .lamports()
+            .checked_add(amount)
+            .ok_or(Errors::NumericalOverflow)?;
+
+        // Transfer
+        **vault_account.try_borrow_mut_lamports().unwrap() = post_from;
+        **user.try_borrow_mut_lamports().unwrap() = post_to;
+
+
+        // Bookkeeping: Update the vault's balance.
+        ctx.accounts.vault_account.balance -= amount;
+
+        msg!("Withdrawn {} SOL from the vault.", amount);
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -194,6 +221,29 @@ pub struct InitTokenParams {
     pub symbol: String,
     pub uri: String,
     pub decimals: u8,
+}
+
+// Withdraw Context
+#[derive(Accounts)]
+pub struct Withdraw<'info> {
+    #[account(
+        mut,
+        seeds = [b"myvault".as_ref()],
+        bump
+    )]
+    pub vault_account: Box<Account<'info, Vault>>,
+    #[account(mut)]
+    pub user: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+// Error struct
+#[error_code]
+pub enum Errors {
+    #[msg("Insufficient balance in the vault.")]
+    InsufficientBalance,
+    #[msg("Numerical overflow occurred.")]
+    NumericalOverflow,
 }
 
 // vault: 2CrczMgQ28oj7BX3GVSkAtjGELUjcKUorpNm8jasuHh2
