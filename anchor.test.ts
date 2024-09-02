@@ -43,12 +43,12 @@ describe("Wallet Program", () => {
   const authority = provider.wallet.publicKey;
 
   // Vault account
-  let vault: anchor.web3.PublicKey;
+  let vault;
 
   // Test initialize the vault
   it("Initialize Vault", async () => {
     // Derive the vault PDA (Program Derived Address)
-    [vault] = await anchor.web3.PublicKey.findProgramAddress(
+    [vault] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from(VAULT_SEED)],
       program.programId
     );
@@ -116,7 +116,7 @@ describe("Wallet Program", () => {
     assert(newInfo, "  Mint should be initialized.");
   });
 
-
+  
   // Test deposit
   it("Deposit Method", async () => {
     const depositAmount = 1 * anchor.web3.LAMPORTS_PER_SOL; // 1 SOL
@@ -128,7 +128,7 @@ describe("Wallet Program", () => {
     });
 
     // Token Balance
-    let initialBalance: number;
+    let initialBalance;
     try {
       const balance = (await pg.connection.getTokenAccountBalance(destination))
       initialBalance = balance.value.uiAmount;
@@ -158,7 +158,7 @@ describe("Wallet Program", () => {
         mint: context.mint,
         destination: destination,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        systemProgram: web3.SystemProgram.programId,
         tokenProgram: context.tokenProgram,
         associatedTokenProgram: context.associatedTokenProgram,
       })
@@ -187,22 +187,71 @@ describe("Wallet Program", () => {
     const vaultAccount = await program.account.vault.fetch(vault);
     console.log("Vault Balance: ", vaultAccount.balance.toNumber());
   });
+
+  // Test withdraw
+  it("Withdraws SOL from the vault", async () => {
+    const amount = 1 * anchor.web3.LAMPORTS_PER_SOL; // 1 SOL
+    
+    // Get the initial SOL balance of the user
+    const initialBalance = await provider.connection.getBalance(
+      provider.wallet.publicKey
+    );
+    
+    // Perform the withdrawal
+    const transactionSignature = await program.methods
+      .withdraw(new anchor.BN(amount))
+      .accounts({
+        vaultAccount: vault,
+        user: authority, // Authority of the vault
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc()
+      .catch((err) => {
+        assert.equal(err.msg, "Insufficient balance in the vault.");
+      });
+    
+    console.log(
+      `\nTransaction Signature: https://solana.fm/tx/${transactionSignature}?cluster=devnet-solana`,
+    );
+
+    // Sleep to wait for the transaction to finalize
+    await sleep(1000);
+
+    // Fetch the updated vault account data
+    // const vaultAccount = await program.account.vault.fetch(vault);
+    // assert.ok(vaultAccount.balance.eq(new anchor.BN(0))); // Assuming the vault was initially at 100
+
+    // Check the user's balance after withdrawal
+    const finalBalance = await provider.connection.getBalance(
+      provider.wallet.publicKey
+    );
+    const fee = BigInt(5000);
+    const expected = BigInt(initialBalance) + BigInt(amount) - fee;
+    // Round both balances to 6 decimal places before comparison
+    const roundedFinalBalance = parseFloat(finalBalance.toString()).toFixed(6);
+    const roundedExpectedBalance = parseFloat(expected.toString()).toFixed(6);
+    // Expecting user's balance to increase (minus transaction fee)
+    assert.ok(roundedExpectedBalance === roundedFinalBalance); 
+  });
 });
 
 // Running tests...
 //   anchor.test.ts:
 //   Wallet Program
 //     Vault is already initialized. Skipping initialization.
-//     ✔ Initialize Vault (77ms)
+//     ✔ Initialize Vault (67ms)
 //     Token ID (Mint Address): 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
 //     Already initiated! Skipping this test.
-//     ✔ Initialize Token (69ms)
-//     Token Balance:  9
-//       https://explorer.solana.com/tx/2bB15RNXByqt8xLRMjBz2rzW6yFwK63TShQibnqjnNAHS2ghWvvEt9dL5sMT4WqjddpvauGpwWGNrZD2EARHK6N7?cluster=devnet
+//     ✔ Initialize Token (67ms)
+//     Token Balance:  42
+//       https://explorer.solana.com/tx/4ZBocnPUvGmx957Ce1p65Q2WJCwxwT52Deso7Bp2A7zE6VacjDTzGXBEjqefZsqAECQy3AZCxh2ZnpbYNpNrYh1b?cluster=devnet
 //     Token ID (Mint Address): 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
 //     Metadata Account: HShh32hQ6WqengwdHJTNvZ7mkjkFiRJ6FCefBLZNWi3q
-//     Token Balance: 10
-//     Deposited SOL into the vault, transaction signature: 2bB15RNXByqt8xLRMjBz2rzW6yFwK63TShQibnqjnNAHS2ghWvvEt9dL5sMT4WqjddpvauGpwWGNrZD2EARHK6N7
-// $     Vault Balance:  12000000000
-//     ✔ Deposit Method (1239ms)
-//   3 passing (1s)
+//     Token Balance: 43
+//     Deposited SOL into the vault, transaction signature: 4ZBocnPUvGmx957Ce1p65Q2WJCwxwT52Deso7Bp2A7zE6VacjDTzGXBEjqefZsqAECQy3AZCxh2ZnpbYNpNrYh1b
+//     Vault Balance:  39999999550
+//     ✔ Deposit Method (1210ms)
+// $     
+// Transaction Signature: https://solana.fm/tx/42gkHJW877Pei4ASCcjMXzCvsge74K7pmw34kYxe4uPCxodo8TeQpfJkdkGwJUxtR7ANFzKLyLTKLdykRUHpyu6h?cluster=devnet-solana
+//     ✔ Withdraws SOL from the vault (6291ms)
+//   4 passing (8s)
