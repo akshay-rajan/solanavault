@@ -111,12 +111,36 @@ pub mod wallet {
         Ok(())
     }
 
-    // Send SOL from the vault to the user
+    // Withdraw SOL from the vault
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+        // Check if the vault has sufficient balance
+        if ctx.accounts.vault_account.balance < amount {
+            return Err(Errors::InsufficientBalance.into());
+        }
+
+        // Calculate LP Tokens to burn
+        let lp_tokens_to_burn = amount; // 1 per SOL
+        // Burn the amount of tokens owned by the user
+        let seeds = &["mint".as_bytes(), &[ctx.bumps.mint]];
+        let signer = [&seeds[..]];
+
+        burn(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Burn {
+                    mint: ctx.accounts.mint.to_account_info(),
+                    from: ctx.accounts.source.to_account_info(),
+                    authority: ctx.accounts.authority.to_account_info(),
+                },
+                &signer,
+            ),
+            lp_tokens_to_burn,
+        )?;
 
         let vault_account = &mut ctx.accounts.vault_account.to_account_info();
         let user = &mut ctx.accounts.user;
 
+        // Calculate balances after transaction
         let post_from = vault_account
             .lamports()
             .checked_sub(amount)
@@ -124,17 +148,20 @@ pub mod wallet {
         let post_to = user
             .lamports()
             .checked_add(amount)
-            .ok_or(Errors::NumericalOverflow)?;
+            .ok_or(Errors::NumericalOverflow)?;        
 
         // Transfer
         **vault_account.try_borrow_mut_lamports().unwrap() = post_from;
         **user.try_borrow_mut_lamports().unwrap() = post_to;
 
-
         // Bookkeeping: Update the vault's balance.
         ctx.accounts.vault_account.balance -= amount;
 
-        msg!("Withdrawn {} SOL from the vault.", amount);
+        msg!(
+            "Withdrawn {} SOL from the vault by burning {} LP Tokens.", 
+            amount, 
+            lp_tokens_to_burn
+        );
         Ok(())
     }
 }
@@ -234,6 +261,21 @@ pub struct Withdraw<'info> {
     pub vault_account: Box<Account<'info, Vault>>,
     #[account(mut)]
     pub user: AccountInfo<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"mint"],
+        bump
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        associated_token::mint = mint,
+        associated_token::authority = user,
+    )]
+    pub source: Account<'info, TokenAccount>, // User's LP token account
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -246,4 +288,5 @@ pub enum Errors {
     NumericalOverflow,
 }
 
-// vault: 2CrczMgQ28oj7BX3GVSkAtjGELUjcKUorpNm8jasuHh2
+// Vault: 2CrczMgQ28oj7BX3GVSkAtjGELUjcKUorpNm8jasuHh2
+// LP Token: 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
