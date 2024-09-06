@@ -1,5 +1,5 @@
 // @ts-nocheck
-describe("Wallet Program", () => {
+describe("MyVault", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -74,7 +74,7 @@ describe("Wallet Program", () => {
       })
       .rpc();
 
-    console.log("Vault initialized, transaction signature:", tx);
+    console.log("Vault initialized.\nTransaction Signature:", tx);
 
     // Verify that the vault was initialized correctly
     const vaultAccount = await program.account.vault.fetch(vault);
@@ -90,10 +90,10 @@ describe("Wallet Program", () => {
 
     const info = await pg.connection.getAccountInfo(mint);
     if (info) {
-      console.log("Already initiated! Skipping this test.");
+      console.log("Token is already initialized! Skipping initialization.");
       return; // Do not attempt to initialize if already initialized
     }
-    console.log("  Mint not found. Attempting to initialize.");
+    console.log("Mint not found. Attempting to initialize.");
   
     const context = {
       metadata: metadataAddress,
@@ -111,7 +111,7 @@ describe("Wallet Program", () => {
       .rpc();
 
     await pg.connection.confirmTransaction(txHash, 'finalized');
-    console.log(`  https://explorer.solana.com/tx/${txHash}?cluster=devnet`);
+    console.log(`Initialized Token.\nTransaction Signature: https://explorer.solana.com/tx/${txHash}?cluster=devnet`);
     const newInfo = await pg.connection.getAccountInfo(mint);
     assert(newInfo, "  Mint should be initialized.");
   });
@@ -119,7 +119,8 @@ describe("Wallet Program", () => {
   
   // Test deposit
   it("Deposit Method", async () => {
-    const depositAmount = 1 * anchor.web3.LAMPORTS_PER_SOL; // 1 SOL
+    const depositSolAmount = 1;
+    const depositAmount = depositSolAmount * anchor.web3.LAMPORTS_PER_SOL; // 1 SOL
 
     // Token Destination
     const destination = await anchor.utils.token.associatedAddress({
@@ -165,7 +166,6 @@ describe("Wallet Program", () => {
       .rpc();
 
     await pg.connection.confirmTransaction(tx);
-    console.log(`  https://explorer.solana.com/tx/${tx}?cluster=devnet`);
 
     const postBalance = (
       await pg.connection.getTokenAccountBalance(destination)
@@ -181,7 +181,10 @@ describe("Wallet Program", () => {
     console.log("Metadata Account:", metadataAddress.toString());
     console.log("Token Balance:", postBalance);
 
-    console.log("Deposited SOL into the vault, transaction signature:", tx);
+    console.log(
+      "Deposited ", depositSolAmount, " SOL into the vault.\nTransaction Signature:", 
+      `https://explorer.solana.com/tx/${tx}?cluster=devnet`
+    );
 
     // Verify that the vault's balance has increased by the deposited amount
     const vaultAccount = await program.account.vault.fetch(vault);
