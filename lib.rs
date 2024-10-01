@@ -2,7 +2,17 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{mint_to, Mint, MintTo, Token, TokenAccount},
+    token::{
+        self, 
+        mint_to, 
+        Mint, 
+        MintTo, 
+        Token, 
+        TokenAccount, 
+        burn, 
+        Burn, 
+        Transfer as SplTransfer
+    },
     metadata::{
         create_metadata_accounts_v3,
         mpl_token_metadata::types::DataV2,
@@ -10,6 +20,7 @@ use anchor_spl::{
         Metadata as Metaplex,
     },
 };
+
 
 // This is your program's public key and it will update
 // automatically when you build the project.
@@ -162,6 +173,21 @@ pub mod wallet {
             amount, 
             lp_tokens_to_burn
         );
+        Ok(())
+    }
+
+    // Deposit a particular SPL Token into the Vault's ATA
+    pub fn deposit_spl(ctx: Context<DepositSpl>, amount: u64) -> Result<()> {
+        let cpi_accounts = SplTransfer {
+            from: ctx.accounts.from_ata.to_account_info(),
+            to: ctx.accounts.vault_ata.to_account_info(),
+            authority: ctx.accounts.from_authority.to_account_info(),
+        };
+        
+        let cpi_context = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
+        token::transfer(cpi_context, amount)?;
+        
+        msg!("Deposited {} SPL tokens to the vault.", amount);
         Ok(())
     }
 }

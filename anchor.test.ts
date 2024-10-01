@@ -1,6 +1,5 @@
 // @ts-nocheck
 describe("MyVault", () => {
-  // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
@@ -262,26 +261,172 @@ describe("MyVault", () => {
     // Expecting user's balance to increase (minus transaction fee)
     assert.ok(roundedExpectedBalance === roundedFinalBalance); 
   });
+  // Test deposit SPL token
+  it("Deposit SPL Method", async () => {
+    const splMint = new anchor.web3.PublicKey("Df43zY66xYsveRLG77faLHa3Xo5LSfAkHhPtDdFwyb2r");
+    const depositAmount = 10 * (10 ** 9); // Assuming the SPL token has 9 decimal places
+    
+    console.log(mint.toString());
+    // Associated Token Account for User
+    const userAta = await anchor.utils.token.associatedAddress({
+        mint: splMint,
+        owner: payer, // payer is the user's publicKey
+    });
+    console.log("User's Associated Token Account: ", userAta.toString());
+
+    // // Associated Token Account for Vault
+    const vaultAta = await anchor.utils.token.associatedAddress({
+        mint: splMint,
+        owner: vault, // vault is the vault's publicKey (PDA)
+    });
+    console.log("Vault's Associated Token Account: ", vaultAta.toString());
+    
+    // Fetch the initial balance of the user and vault
+    let initialUserBalance = (await pg.connection.getTokenAccountBalance(userAta)).value.uiAmount;
+    let initialVaultBalance = (await pg.connection.getTokenAccountBalance(vaultAta)).value.uiAmount;
+    console.log("Initial User Balance:", initialUserBalance);
+    console.log("Initial Vault Balance:", initialVaultBalance);
+
+    // Ensure the user has enough tokens for the deposit
+    if (initialUserBalance < (depositAmount / (10 ** 9))) {
+        throw new Error("Insufficient SPL tokens in user's account for deposit.");
+    }
+
+    // Prepare the context for the deposit_spl instruction
+    const tx = await program.methods
+        .depositSpl(new anchor.BN(depositAmount)) // Using the correct deposit amount
+        .accounts({
+            fromAuthority: payer, // payer is the signer
+            fromAta: userAta, // user's token account (SPL)
+            vaultAta: vaultAta, // vault's token account (SPL)
+            tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+    console.log(`Deposit Transaction Signature: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
+
+    // Fetch the balances after the deposit
+    const finalUserBalance = (await pg.connection.getTokenAccountBalance(userAta)).value.uiAmount;
+    const finalVaultBalance = (await pg.connection.getTokenAccountBalance(vaultAta)).value.uiAmount;
+
+    console.log("Final User Balance:", finalUserBalance);
+    console.log("Final Vault Balance:", finalVaultBalance);
+
+    // Validate the changes in balances
+    assert.equal(
+        finalUserBalance, initialUserBalance - (depositAmount / (10 ** 9)),
+        "User's balance should decrease by the deposit amount."
+    );
+    assert.equal(
+        finalVaultBalance, initialVaultBalance + (depositAmount / (10 ** 9)),
+        "Vault's balance should increase by the deposit amount."
+    );
+
+    console.log("Deposited", depositAmount / (10 ** 9), "SPL Tokens into the vault.");
+  });
+  // Test deposit SPL token
+  it("Deposit SPL Method", async () => {
+    const splMint = new anchor.web3.PublicKey("Df43zY66xYsveRLG77faLHa3Xo5LSfAkHhPtDdFwyb2r");
+    const depositAmount = 10 * (10 ** 9);
+    
+    console.log(mint.toString());
+    // Associated Token Account for User
+    const userAta = await anchor.utils.token.associatedAddress({
+        mint: splMint,
+        owner: payer, // payer is the user's publicKey
+    });
+    console.log("User's Associated Token Account: ", userAta.toString());
+
+    // // Associated Token Account for Vault
+    const vaultAta = await anchor.utils.token.associatedAddress({
+        mint: splMint,
+        owner: vault, // vault is the vault's publicKey (PDA)
+    });
+    console.log("Vault's Associated Token Account: ", vaultAta.toString());
+    
+    // Fetch the initial balance of the user and vault
+    let initialUserBalance = (await pg.connection.getTokenAccountBalance(userAta)).value.uiAmount;
+    let initialVaultBalance = (await pg.connection.getTokenAccountBalance(vaultAta)).value.uiAmount;
+    console.log("Initial User Balance:", initialUserBalance);
+    console.log("Initial Vault Balance:", initialVaultBalance);
+
+    // Ensure the user has enough tokens for the deposit
+    if (initialUserBalance < (depositAmount / (10 ** 9))) {
+        throw new Error("Insufficient SPL tokens in user's account for deposit.");
+    }
+
+    // Prepare the context for the deposit_spl instruction
+    const tx = await program.methods
+        .depositSpl(new anchor.BN(depositAmount)) // Using the correct deposit amount
+        .accounts({
+            fromAuthority: payer, // payer is the signer
+            fromAta: userAta, // user's token account (SPL)
+            vaultAta: vaultAta, // vault's token account (SPL)
+            tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+    console.log(`Deposit Transaction Signature: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
+
+    // Fetch the balances after the deposit
+    const finalUserBalance = (await pg.connection.getTokenAccountBalance(userAta)).value.uiAmount;
+    const finalVaultBalance = (await pg.connection.getTokenAccountBalance(vaultAta)).value.uiAmount;
+
+    console.log("Final User Balance:", finalUserBalance);
+    console.log("Final Vault Balance:", finalVaultBalance);
+
+    // Validate the changes in balances
+    assert.equal(
+        finalUserBalance, initialUserBalance - (depositAmount / (10 ** 9)),
+        "User's balance should decrease by the deposit amount."
+    );
+    assert.equal(
+        finalVaultBalance, initialVaultBalance + (depositAmount / (10 ** 9)),
+        "Vault's balance should increase by the deposit amount."
+    );
+
+    console.log("Deposited", depositAmount / (10 ** 9), "SPL Tokens into the vault.");
+  });
 });
 
 // Running tests...
 //   anchor.test.ts:
-//   Wallet Program
+//   MyVault
 //     Vault is already initialized. Skipping initialization.
-//     ✔ Initialize Vault (191ms)
-//     Token ID (Mint Address): 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
+//     ✔ Initialize Vault (65ms)
+//     Token ID (Mint Address): 7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
 //     Token is already initialized! Skipping initialization.
-//     ✔ Initialize Token (67ms)
-//     Token Balance:  42
-//     Token ID (Mint Address): 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
-//     Metadata Account: HShh32hQ6WqengwdHJTNvZ7mkjkFiRJ6FCefBLZNWi3q
-//     Token Balance: 43
+//     ✔ Initialize Token (61ms)
+//     Token Balance:  3
+// $     Token ID (Mint Address): 7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
+//     Metadata Account: B7mSvT561KuYA3fD92DLnUeMfthWyHdD2FisvqnBdNZD
+//     Token Balance: 4
 //     Deposited  1  SOL into the vault.
-// Transaction Signature: https://explorer.solana.com/tx/61QuqhWGzkwPvsk6f1U8Kj2sWwJrYzAhRPZLFAWQRrCQujF7T3EusgzE6xSDYi1jW9uK755HpkdTKABzV5HFc6gh?cluster=devnet
-//     Vault Balance:  33999999550
-//     ✔ Deposit Method (1599ms)
-// $     Token Balance:  42
+// Transaction Signature: https://explorer.solana.com/tx/48CcEuPTtkdLyYHkAN2vQjqutW8xASWba4G6MDUJyUmBRfbxWd5PFaJgL6ewbv15LQ1ezQFx5Q61tS8BAWhjoTz?cluster=devnet
+//     Vault Balance:  4000000000
+//     ✔ Deposit Method (6418ms)
+//     Token Balance:  3
 //     Withdrawn  1  SOL from the vault. 
-// Transaction Signature: https://explorer.solana.com/tx/2xj6jfyyJqoUBsZgR2i7cRsVFiVjZsuKeYVNwURddDrc82E8rcWYqKy5HUkKj4uF2G8xPFU2T3KNwKBDwShbDaU5?cluster=devnet
-//     ✔ Withdraw Method (5335ms)
-//   4 passing (7s)
+// Transaction Signature: https://explorer.solana.com/tx/5NvnSN1GxiY13e1jwfx5rpZyPXq1G6R539vC42JzXFkgcSSSsEJ9xHhopsDJxoSpuMho8Z1qnNJMnEXYYZRvET3H?cluster=devnet
+//     ✔ Withdraw Method (6578ms)
+//     7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
+//     User's Associated Token Account:  FyRiu4fF1raH3qsMqp9qWxxsrg6QeVVdvpCqyUj55D3a
+//     Vault's Associated Token Account:  DF9Poiopw8GZDzmbxEw4b9TuUeHA6qEdDwBqvR52zoJ8
+//     Initial User Balance: 360
+//     Initial Vault Balance: 90
+//     Deposit Transaction Signature: https://explorer.solana.com/tx/4NkvJL8WhVqYvYAxNPX2udq3Nyi5NgpXtStjJfzsdJrPCBp8Mj7EDEyvE4WHr76A76JWXkGCHChexvJp9PxvnKi3?cluster=devnet
+//     Final User Balance: 350
+//     Final Vault Balance: 100
+//     Deposited 10 SPL Tokens into the vault.
+//     ✔ Deposit SPL Method (2100ms)
+//     7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
+//     User's Associated Token Account:  FyRiu4fF1raH3qsMqp9qWxxsrg6QeVVdvpCqyUj55D3a
+//     Vault's Associated Token Account:  DF9Poiopw8GZDzmbxEw4b9TuUeHA6qEdDwBqvR52zoJ8
+//     Initial User Balance: 350
+//     Initial Vault Balance: 100
+//     Deposit Transaction Signature: https://explorer.solana.com/tx/2wnmNwAx5y3dkPCLGgJmMSkHSjEB3vdheQn1aHse8soZ9QeqC63jKgguSmTukT2Pf4ma1zV4ec4ubF2WTXWoAVmq?cluster=devnet
+//     Final User Balance: 340
+//     Final Vault Balance: 110
+//     Deposited 10 SPL Tokens into the vault.
+//     ✔ Deposit SPL Method (740ms)
+//   6 passing (16s)
