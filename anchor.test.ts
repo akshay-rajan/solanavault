@@ -366,6 +366,8 @@ describe("MyVault", () => {
         })
         .rpc();
 
+    await sleep(1000);
+
     console.log(`Deposit Transaction Signature: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
 
     // Fetch the balances after the deposit
@@ -393,40 +395,40 @@ describe("MyVault", () => {
 //   anchor.test.ts:
 //   MyVault
 //     Vault is already initialized. Skipping initialization.
-//     ✔ Initialize Vault (65ms)
+//     ✔ Initialize Vault (78ms)
 //     Token ID (Mint Address): 7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
 //     Token is already initialized! Skipping initialization.
-//     ✔ Initialize Token (61ms)
+//     ✔ Initialize Token (98ms)
 //     Token Balance:  3
-// $     Token ID (Mint Address): 7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
+//     Token ID (Mint Address): 7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
 //     Metadata Account: B7mSvT561KuYA3fD92DLnUeMfthWyHdD2FisvqnBdNZD
 //     Token Balance: 4
 //     Deposited  1  SOL into the vault.
-// Transaction Signature: https://explorer.solana.com/tx/48CcEuPTtkdLyYHkAN2vQjqutW8xASWba4G6MDUJyUmBRfbxWd5PFaJgL6ewbv15LQ1ezQFx5Q61tS8BAWhjoTz?cluster=devnet
+// Transaction Signature: https://explorer.solana.com/tx/2RAqF1igKgFsfs9ZVqcrMtt4iXagwo13ddZjywxFB6DphHxxHnbLXiFiCfhiSdp1GEBfcWQBYx3XbS5LWrkd24CL?cluster=devnet
 //     Vault Balance:  4000000000
-//     ✔ Deposit Method (6418ms)
-//     Token Balance:  3
+//     ✔ Deposit Method (1336ms)
+//     Token Balance:  4
 //     Withdrawn  1  SOL from the vault. 
-// Transaction Signature: https://explorer.solana.com/tx/5NvnSN1GxiY13e1jwfx5rpZyPXq1G6R539vC42JzXFkgcSSSsEJ9xHhopsDJxoSpuMho8Z1qnNJMnEXYYZRvET3H?cluster=devnet
-//     ✔ Withdraw Method (6578ms)
+// Transaction Signature: https://explorer.solana.com/tx/21XzAGqMQRgvddxukrUW2XXsvVUDcLxcM3jyi3iPqDdWCyyyisi8sAHfCoRJMPExpdPUD16TSk5kgW3bCF8hxh5E?cluster=devnet
+//     ✔ Withdraw Method (1849ms)
 //     7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
 //     User's Associated Token Account:  FyRiu4fF1raH3qsMqp9qWxxsrg6QeVVdvpCqyUj55D3a
 //     Vault's Associated Token Account:  DF9Poiopw8GZDzmbxEw4b9TuUeHA6qEdDwBqvR52zoJ8
-//     Initial User Balance: 360
-//     Initial Vault Balance: 90
-//     Deposit Transaction Signature: https://explorer.solana.com/tx/4NkvJL8WhVqYvYAxNPX2udq3Nyi5NgpXtStjJfzsdJrPCBp8Mj7EDEyvE4WHr76A76JWXkGCHChexvJp9PxvnKi3?cluster=devnet
-//     Final User Balance: 350
-//     Final Vault Balance: 100
+//     Initial User Balance: 216
+//     Initial Vault Balance: 230
+//     Deposit Transaction Signature: https://explorer.solana.com/tx/4sJYaGPGGobcV4DvryyW7mRGKtdXuqbVeLtgRFUaqhxhGwH3bcj3W3mUPFhuqmZgP9sq2WnQLZ3YKzWAs2YB8yXA?cluster=devnet
+//     Final User Balance: 206
+//     Final Vault Balance: 240
 //     Deposited 10 SPL Tokens into the vault.
-//     ✔ Deposit SPL Method (2100ms)
+//     ✔ Deposit SPL Method (870ms)
 //     7pP8ndKYLAzJxnoXccxTZzZVYNzgQTx3DZX1MUDkWME6
 //     User's Associated Token Account:  FyRiu4fF1raH3qsMqp9qWxxsrg6QeVVdvpCqyUj55D3a
 //     Vault's Associated Token Account:  DF9Poiopw8GZDzmbxEw4b9TuUeHA6qEdDwBqvR52zoJ8
-//     Initial User Balance: 350
-//     Initial Vault Balance: 100
-//     Deposit Transaction Signature: https://explorer.solana.com/tx/2wnmNwAx5y3dkPCLGgJmMSkHSjEB3vdheQn1aHse8soZ9QeqC63jKgguSmTukT2Pf4ma1zV4ec4ubF2WTXWoAVmq?cluster=devnet
-//     Final User Balance: 340
-//     Final Vault Balance: 110
+//     Initial User Balance: 206
+//     Initial Vault Balance: 240
+//     Deposit Transaction Signature: https://explorer.solana.com/tx/2jevsBrRwUB2PKCS6PsaZ39Wu6npkpsEouKTrr7uSgAntp1J6bpraHZ7uEoYrdz4khvbsbeY7ehF1xURwLheQtdE?cluster=devnet
+//     Final User Balance: 196
+//     Final Vault Balance: 250
 //     Deposited 10 SPL Tokens into the vault.
-//     ✔ Deposit SPL Method (740ms)
-//   6 passing (16s)
+//     ✔ Deposit SPL Method (2706ms)
+//   6 passing (7s)

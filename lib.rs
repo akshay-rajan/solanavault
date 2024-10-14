@@ -314,5 +314,17 @@ pub enum Errors {
     NumericalOverflow,
 }
 
+// Deposit SPL Token Context
+#[derive(Accounts)]
+pub struct DepositSpl<'info> {
+    #[account(mut)]
+    pub from_authority: Signer<'info>,
+    #[account(mut)]
+    pub from_ata: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub vault_ata: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+}
+
 // Vault: 2CrczMgQ28oj7BX3GVSkAtjGELUjcKUorpNm8jasuHh2
 // LP Token: 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
