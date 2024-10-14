@@ -22,12 +22,9 @@ use anchor_spl::{
 };
 
 
-// This is your program's public key and it will update
-// automatically when you build the project.
 declare_id!("FWTNSo6JUP1vEbpjhwzq7FTmTZPZupVvE3mQgNjFk9QL");
 
 
-// Main program for managing the locker
 #[program]
 pub mod wallet {
     use super::*;
@@ -176,20 +173,61 @@ pub mod wallet {
         Ok(())
     }
 
-    // Deposit a particular SPL Token into the Vault's ATA
     pub fn deposit_spl(ctx: Context<DepositSpl>, amount: u64) -> Result<()> {
+        // Transfer SPL tokens from the user's ATA to vault's ATA
         let cpi_accounts = SplTransfer {
-            from: ctx.accounts.from_ata.to_account_info(),
+            from: ctx.accounts.user_ata.to_account_info(),
             to: ctx.accounts.vault_ata.to_account_info(),
-            authority: ctx.accounts.from_authority.to_account_info(),
+            authority: ctx.accounts.user.to_account_info(),
         };
-        
         let cpi_context = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
         token::transfer(cpi_context, amount)?;
-        
-        msg!("Deposited {} SPL tokens to the vault.", amount);
+
+        // Mint LP tokens based on the deposited SPL tokens
+        let lp_tokens_to_mint = amount; // 1 LP token per 1 SPL token deposited
+        let seeds = &["mint".as_bytes(), &[ctx.bumps.mint]];
+        let signer = [&seeds[..]];
+
+        mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                MintTo {
+                    authority: ctx.accounts.mint.to_account_info(),
+                    to: ctx.accounts.user_lp_ata.to_account_info(),
+                    mint: ctx.accounts.mint.to_account_info(),
+                },
+                &signer,
+            ),
+            lp_tokens_to_mint,
+        )?;
+
+        msg!("Deposited {} SPL tokens and minted {} LP tokens.", amount, lp_tokens_to_mint);
         Ok(())
     }
+
+
+    // Withdraw SPL Tokens from the vault
+    pub fn withdraw_spl(ctx: Context<WithdrawSpl>, amount: u64) -> Result<()> {
+        // Check if the vault has sufficient SPL balance
+        if ctx.accounts.vault_ata.amount < amount {
+            return Err(Errors::InsufficientBalance.into());
+        }
+
+        // Perform the token transfer
+        let cpi_accounts = SplTransfer {
+            from: ctx.accounts.vault_ata.to_account_info(),
+            to: ctx.accounts.user_ata.to_account_info(),
+            authority: ctx.accounts.authority.to_account_info(),
+        };
+
+        let cpi_context = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
+        token::transfer(cpi_context, amount)?;
+
+        msg!("Withdrew {} SPL tokens from the vault.", amount);
+
+        Ok(())
+    }
+
 }
 
 #[derive(Accounts)]
@@ -305,7 +343,6 @@ pub struct Withdraw<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// Error struct
 #[error_code]
 pub enum Errors {
     #[msg("Insufficient balance in the vault.")]
@@ -314,17 +351,54 @@ pub enum Errors {
     NumericalOverflow,
 }
 
-// Deposit SPL Token Context
 #[derive(Accounts)]
 pub struct DepositSpl<'info> {
     #[account(mut)]
-    pub from_authority: Signer<'info>,
+    pub user: Signer<'info>,
     #[account(mut)]
-    pub from_ata: Account<'info, TokenAccount>,
+    pub user_ata: Account<'info, TokenAccount>, // For SPL
+    #[account(
+        mut,
+        seeds = [b"myvault".as_ref()],
+        bump
+    )]
+    pub vault_account: Box<Account<'info, Vault>>,
     #[account(mut)]
-    pub vault_ata: Account<'info, TokenAccount>,
+    pub vault_ata: Account<'info, TokenAccount>, // For SPL
+    #[account(
+        mut,
+        seeds = [b"mint"],
+        bump
+    )]
+    pub mint: Account<'info, Mint>, // LP token mint
+    #[account(
+        init_if_needed,
+        payer = user,
+        associated_token::mint = mint,
+        associated_token::authority = user,
+    )]
+    pub user_lp_ata: Account<'info, TokenAccount>, // User LP ATA
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+
+#[derive(Accounts)]
+pub struct WithdrawSpl<'info> {
+    #[account(mut)]
+    pub user_ata: Account<'info, TokenAccount>, // To
+    #[account(mut)]
+    pub vault_ata: Account<'info, TokenAccount>, // From 
+    #[account(mut)]
+    pub authority: Signer<'info>, // Signer
     pub token_program: Program<'info, Token>,
 }
 
-// Vault: 2CrczMgQ28oj7BX3GVSkAtjGELUjcKUorpNm8jasuHh2
-// LP Token: 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
+
+// vault: 2CrczMgQ28oj7BX3GVSkAtjGELUjcKUorpNm8jasuHh2
+// mint: 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
+// spl: Df43zY66xYsveRLG77faLHa3Xo5LSfAkHhPtDdFwyb2r https://spl.solana.com/token
+// ata: GvzKqWhaCHUczyEaAkCE2mZvHkRJRvWS6shVNtyuhmxc
+
