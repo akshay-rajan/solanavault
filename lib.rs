@@ -22,7 +22,7 @@ use anchor_spl::{
 };
 
 
-declare_id!("FWTNSo6JUP1vEbpjhwzq7FTmTZPZupVvE3mQgNjFk9QL");
+declare_id!("program_id");
 
 
 #[program]
@@ -205,7 +205,6 @@ pub mod wallet {
         Ok(())
     }
 
-
     // Withdraw SPL Tokens from the vault
     pub fn withdraw_spl(ctx: Context<WithdrawSpl>, amount: u64) -> Result<()> {
         // Check if the vault has sufficient SPL balance
@@ -213,18 +212,44 @@ pub mod wallet {
             return Err(Errors::InsufficientBalance.into());
         }
 
-        // Perform the token transfer
+        // Burn LP Tokens
+        let lp_tokens_to_burn = amount;
+        let seeds = &["mint".as_bytes(), &[ctx.bumps.mint]];
+        let signer = [&seeds[..]];
+        burn(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Burn {
+                    mint: ctx.accounts.mint.to_account_info(),
+                    from: ctx.accounts.user_lp_ata.to_account_info(),
+                    authority: ctx.accounts.user.to_account_info(),
+                },
+                &signer,
+            ),
+            lp_tokens_to_burn,
+        )?;
+
+        // SPL Transfer
+        let bump = ctx.bumps.vault;
+        let vault_seeds = &["myvault".as_bytes(), &[bump]];
+        let vault_signer = &[&vault_seeds[..]];
         let cpi_accounts = SplTransfer {
             from: ctx.accounts.vault_ata.to_account_info(),
             to: ctx.accounts.user_ata.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
+            authority: ctx.accounts.vault.to_account_info(),
         };
-
-        let cpi_context = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
+        let cpi_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(), 
+            cpi_accounts,
+            vault_signer
+        );
         token::transfer(cpi_context, amount)?;
 
-        msg!("Withdrew {} SPL tokens from the vault.", amount);
-
+        msg!(
+            "Withdrawn {} SOL from the vault by burning {} LP Tokens.", 
+            amount, 
+            lp_tokens_to_burn
+        );
         Ok(())
     }
 
@@ -384,21 +409,33 @@ pub struct DepositSpl<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-
 #[derive(Accounts)]
 pub struct WithdrawSpl<'info> {
+    #[account(mut)]
+    pub user: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [b"myvault".as_ref()],
+        bump
+    )]
+    pub vault: Box<Account<'info, Vault>>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
     #[account(mut)]
     pub user_ata: Account<'info, TokenAccount>, // To
     #[account(mut)]
     pub vault_ata: Account<'info, TokenAccount>, // From 
-    #[account(mut)]
-    pub authority: Signer<'info>, // Signer
+    #[account(
+        mut,
+        seeds = [b"mint"],
+        bump
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        associated_token::mint = mint,
+        associated_token::authority = user,
+    )]
+    pub user_lp_ata: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
-
-
-// vault: 2CrczMgQ28oj7BX3GVSkAtjGELUjcKUorpNm8jasuHh2
-// mint: 486Gmv7sUkdtuymz4xGct1KWLfwXJwm64tgrjGRuGKFs
-// spl: Df43zY66xYsveRLG77faLHa3Xo5LSfAkHhPtDdFwyb2r https://spl.solana.com/token
-// ata: GvzKqWhaCHUczyEaAkCE2mZvHkRJRvWS6shVNtyuhmxc
-
